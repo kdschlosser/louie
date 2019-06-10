@@ -66,13 +66,23 @@ class QtWidgetPlugin(Plugin):
     def is_live(self, receiver):
         """If receiver is a method on a QWidget, only return True if
         it hasn't been destroyed."""
-        if (hasattr(receiver, 'im_self') and
+        if (
+            hasattr(receiver, 'im_self') and
             isinstance(receiver.im_self, self.qt.QWidget)
-            ):
+        ):
             try:
                 receiver.im_self.x()
             except RuntimeError:
                 return False
+        elif (
+            hasattr(receiver, '__self__') and
+            isinstance(receiver.__self__, self.qt.QWidget)
+        ):
+            try:
+                receiver.__self__.x()
+            except RuntimeError:
+                return False
+
         return True
 
     def _is_live_no_qt(self, receiver):
@@ -101,6 +111,7 @@ class TwistedDispatchPlugin(Plugin):
             d = self._Deferred()
             def called(dummy):
                 return receiver(*args, **kw)
+
             d.addCallback(called)
             self._internet.reactor.callLater(0, d.callback, None)
             return d
